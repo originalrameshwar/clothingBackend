@@ -2,21 +2,22 @@ import mongoose, { Schema } from "mongoose";
 
 const cartSchema = new Schema(
   {
-    items:{
-        type: Array,
-        required: true,
-        default: []
+    items: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      required: true,
+      default: [],
     },
-    total_price:{
-        type: Number,
-        required: true,
-        default: 0
+    total_price: {
+      type: Number,
+      required: true,
+      default: 0,
     },
-    user:{
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    }
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
   },
   {
     timestamps: true,
@@ -24,4 +25,3 @@ const cartSchema = new Schema(
 );
 
 export const Cart = mongoose.model("Cart", cartSchema);
-

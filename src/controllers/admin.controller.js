@@ -1,171 +1,146 @@
-import { User } from "./models/user";
-import { Product } from "./models/product";
-import { Order } from "./models/order";
-import { Review } from "./models/review";
+import { Product } from "../models/product.model.js";
+import { Order } from "../models/order.model.js";
+import { User } from "../models/user.model.js";
+import { Review } from "../models/review.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 
-// POST:admin/addProduct req.body.product
-export const addProduct = asyncHandler(async (req, res) => {
-  console.log("addProduct");
-  try {
-    const { name, description, price, category, image_urls, tags } =
-      req.body.product;
-
-    if (!name && !description && !price && !category && !image_urls && !tags) {
-      throw new ApiError(404, "Please!! provide all fields");
-    }
-
-    // Create new product
-    const product = new Product({
-      name,
-      description,
-      price,
-      category,
-      image_urls,
-      tags,
-    });
-
-    // Save product to database
-    await product.save();
-
-    res
-      .status(201)
-      .json({ success: true, message: "Product added successfully" });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Internal server error. Please try again",
-    });
-  }
+// Add a new product
+const addProduct = asyncHandler(async (req, res) => {
+  const { name, description, price, category, stock } = req.body;
+  const newProduct = new Product({ name, description, price, category, stock });
+  await newProduct.save();
+  res
+    .status(201)
+    .json({ success: true, message: "Product added successfully" });
 });
 
-// DELETE:admin/product/:id/delete req.body.productId
-export const deleteProduct = asyncHandler(async (req, res) => {
-  console.log("deleteProduct");
-
-  try {
-    const productId = req.body.productId;
-    if (!productId) {
-      throw new ApiError(404, "Product not found!!");
-    }
-
-    // Find product by ID and delete
-    await Product.findByIdAndDelete(productId);
-
-    res.json({ success: true, message: "Product deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error. Please try again",
-    });
-  }
-});
-// GET admin/orders
-export const viewOrders = asyncHandler(async (req, res) => {
-  console.log("viewOrders");
-
-  try {
-    // Fetch all orders from database
-    const orders = await Order.find();
-
-    res.json({ success: true, orders });
-  } catch (error) {
-    console.error("Error viewing orders:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+// Update a product
+const updateProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const updatedProduct = await Product.findByIdAndUpdate(id, updates, {
+    new: true,
+  });
+  if (!updatedProduct) throw new ApiError(404, "Product not found");
+  res.json(updatedProduct);
 });
 
-// GET admin/users req.body.userId
-export const viewUsers = asyncHandler(async (req, res) => {
-  console.log("viewUsers");
-  try {
-    const users = await User.find({});
-
-    if (!users) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Users not found" });
-    }
-    res.json({ success: true, users });
-  } catch (error) {
-    console.error("Error viewing user details:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+// Delete a product
+const deleteProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const deletedProduct = await Product.findByIdAndDelete(id);
+  if (!deletedProduct) throw new ApiError(404, "Product not found");
+  res.json({ success: true, message: "Product deleted successfully" });
 });
 
-// GET admin/user/:id req.body.userId
-export const viewUserDetails = asyncHandler(async (req, res) => {
-  console.log("viewUserDetails");
-  try {
-    const userId = req.body.userId;
-    if (!userId) {
-      throw new ApiError(404, "Provid user id");
-    }
-
-    // Fetch user details from database
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error("Error viewing user details:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+// View all products
+const viewAllProducts = asyncHandler(async (req, res) => {
+  const products = await Product.find();
+  res.json(products);
 });
 
-// GET admin/products/:category req.body.category
-export const viewProductbyCategory = asyncHandler(async (req, res) => {
-  console.log("viewProductbyCategory");
-  try {
-    const category = await req.body.category;
-    if (!category) {
-      throw new ApiError(404, "Invalid category");
-    }
-    const products = await Product.find({ category: category });
-    if (!products) {
-      throw new ApiError(404, "No products found");
-    }
-    res.json({ success: true, products });
-  } catch (error) {
-    console.error("Error viewing products:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+// View products by category
+const viewProductByCategory = asyncHandler(async (req, res) => {
+  const { category } = req.params;
+  const products = await Product.find({ category });
+  res.json(products);
 });
 
-// GET admin/products/reviews
-export const viewproductsReviews = asyncHandler(async (req, res) => {
-  try {
-    const reviews = await Review.find({});
-    if (!reviews) {
-      throw new ApiError(404, "No reviews found");
-    }
-
-    res.json({ success: true, Review });
-  } catch (error) {
-    console.error("Error viewing product review:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+// View all orders
+const viewOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find().populate("user", "username email");
+  res.json(orders);
 });
 
-// GET admin/products/reviews/:id req.body.review_id
-export const viewproductReview = asyncHandler(async (req, res) => {
-  try {
-    const review_id = req.body.review_id;
-
-    const review = await Review.findById(review_id);
-    if (!review) {
-      throw new ApiError(404, "Review not found");
-    }
-    res.json({ success: true, review });
-  } catch (error) {
-    console.error("Error viewing product review:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+// View order details
+const viewOrderDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const order = await Order.findById(id).populate("user", "username email");
+  if (!order) throw new ApiError(404, "Order not found");
+  res.json(order);
 });
+
+// Update order status
+const updateOrderStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const updatedOrder = await Order.findByIdAndUpdate(
+    id,
+    { status },
+    { new: true }
+  );
+  if (!updatedOrder) throw new ApiError(404, "Order not found");
+  res.json(updatedOrder);
+});
+
+// View all users
+const viewUsers = asyncHandler(async (req, res) => {
+  const users = await User.find();
+  res.json(users);
+});
+
+// View user details
+const viewUserDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+  if (!user) throw new ApiError(404, "User not found");
+  res.json(user);
+});
+
+// Delete a user
+const deleteUser = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const deletedUser = await User.findByIdAndDelete(id);
+  if (!deletedUser) throw new ApiError(404, "User not found");
+  res.json({ success: true, message: "User deleted successfully" });
+});
+
+// View all product reviews
+const viewProductReviews = asyncHandler(async (req, res) => {
+  const reviews = await Review.find().populate("product", "name");
+  res.json(reviews);
+});
+
+// View a specific product review
+const viewProductReview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const review = await Review.findById(id).populate("product", "name");
+  if (!review) throw new ApiError(404, "Review not found");
+  res.json(review);
+});
+
+// Add a product review
+const addProductReview = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  const { rating, comment } = req.body;
+  const newReview = new Review({ product: productId, rating, comment });
+  await newReview.save();
+  res.status(201).json({ success: true, message: "Review added successfully" });
+});
+
+// Delete a product review
+const deleteProductReview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const deletedReview = await Review.findByIdAndDelete(id);
+  if (!deletedReview) throw new ApiError(404, "Review not found");
+  res.json({ success: true, message: "Review deleted successfully" });
+});
+
+export {
+  addProduct,
+  updateProduct,
+  deleteProduct,
+  viewOrders,
+  viewOrderDetails,
+  updateOrderStatus,
+  viewUsers,
+  viewUserDetails,
+  deleteUser,
+  viewProductByCategory,
+  viewAllProducts,
+  viewProductReviews,
+  viewProductReview,
+  addProductReview,
+  deleteProductReview,
+};
